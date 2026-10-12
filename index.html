@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="description"
+        content="WAM-Adapter: Efficiently Adapting Video-DiT World Representations to Robot Actions.">
+    <meta name="keywords"
+        content="WAM-Adapter, World Action Model, Video Diffusion Transformer, Robot Manipulation, LoRA">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WAM-Adapter: Efficiently Adapting Video-DiT World Representations to Robot Actions</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+    <link rel="stylesheet" href="./static/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+    <link rel="stylesheet" href="./static/css/index.css?v=20261012a">
+    <link rel="icon" href="./static/images/favicon.svg">
+
+    <script defer src="./static/js/fontawesome.all.min.js"></script>
+    <script defer src="./static/js/index.js?v=20261012a"></script>
+</head>
+
+<body>
+
+    <nav class="navbar site-navbar" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item nav-title" href="#top">WAM-Adapter</a>
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="site-nav">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+        <div id="site-nav" class="navbar-menu">
+            <div class="navbar-end">
+                <a class="navbar-item" href="#overview">Overview</a>
+                <a class="navbar-item" href="#abstract">Abstract</a>
+                <a class="navbar-item" href="#method">Method</a>
+                <a class="navbar-item" href="#results">Results</a>
+                <a class="navbar-item" href="#BibTeX">BibTeX</a>
+                <a class="navbar-item" href="https://github.com/ldx825/WAM-Adapter">Code</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero publication-hero" id="top">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column has-text-centered">
+                        <h1 class="title is-1 publication-title">WAM-Adapter: Efficiently Adapting Video-DiT World
+                            Representations to Robot Actions</h1>
+
+                        <div class="publication-authors author-list">
+                            <span class="author-block">Dongxu Liu<sup>1,*</sup></span>
+                            <span class="author-block">Zhe Li<sup>1,*</sup></span>
+                            <span class="author-block">Zundong Ke<sup>1</sup></span>
+                            <span class="author-block">Zhipeng Zhang<sup>1,&dagger;</sup></span>
+                        </div>
+
+                        <div class="publication-authors affiliation-list">
+                            <span class="author-block"><sup>1</sup>AutoLab, School of Artificial Intelligence, Shanghai
+                                Jiao Tong University</span>
+                        </div>
+
+                        <div class="author-notes">
+                            <span>* Equal contribution.</span>
+                            <span>&dagger; Corresponding author.</span>
+                        </div>
+
+                        <div class="publication-links">
+                            <span class="link-block">
+                                <a href="https://arxiv.org/abs/XXXX.XXXXX"
+                                    class="external-link button is-normal is-dark">
+                                    <span class="icon"><i class="ai ai-arxiv"></i></span>
+                                    <span>arXiv (coming soon)</span>
+                                </a>
+                            </span>
+                            <span class="link-block">
+                                <a href="https://github.com/ldx825/WAM-Adapter"
+                                    class="external-link button is-normal is-dark">
+                                    <span class="icon"><i class="fab fa-github"></i></span>
+                                    <span>Code</span>
+                                </a>
+                            </span>
+                            <span class="link-block">
+                                <a href="https://huggingface.co/ldx825/WAM-Adapter"
+                                    class="external-link button is-normal is-dark">
+                                    <span class="icon"><i class="fas fa-cube"></i></span>
+                                    <span>Models (coming soon)</span>
+                                </a>
+                            </span>
+                        </div>
+
+                        <div class="logo-row">
+                            <img src="./static/images/logos/autolab_logo.png" alt="AutoLab logo">
+                            <img src="./static/images/logos/sai_logo.jpeg"
+                                alt="School of Artificial Intelligence, SJTU logo">
+                            <img src="./static/images/logos/sjtu_logo.png" alt="Shanghai Jiao Tong University logo">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main>
+        <section class="section overview-section" id="overview">
+            <div class="container is-max-desktop">
+                <figure class="figure-panel overview-figure">
+                    <img src="./static/images/paper/teaser.png" alt="WAM-Adapter efficiency and performance teaser">
+                    <figcaption>
+                        <strong>TL;DR:</strong> WAM-Adapter freezes a compact 1.3B Video-DiT, adapts it with LoRA, and
+                        directly reuses the multi-layer representations produced by a <em>single</em> current+future
+                        forward pass. Inference needs no future-video generation and no iterative action denoising,
+                        achieving 89.0% success across 50 RoboTwin 2.0 tasks with only 121M trainable parameters.
+                    </figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <section class="section" id="abstract">
+            <div class="container is-max-desktop">
+                <h2 class="title is-3 section-title">Abstract</h2>
+                <div class="content abstract-content">
+                    <p>Pretrained Video Diffusion Transformers encode rich spatiotemporal priors from large-scale
+                        videos, making them promising backbones for robot control. However, efficiently adapting them
+                        into World Action Models remains challenging. Existing approaches reduce video-adaptation or
+                        action-prediction costs, but it remains unclear whether representations produced during
+                        future-video adaptation can directly support lightweight action prediction.</p>
+                    <p>To address this gap, we propose WAM-Adapter, a parameter- and training-efficient framework that
+                        freezes the Video-DiT backbone, adapts it with LoRA, and reuses multi-layer representations for
+                        action prediction. A lightweight readout organizes multi-layer K/V representations from
+                        current-and-future processing into Current, Early-Future, and Late-Future groups, applying
+                        group-specific cross-layer fusion for action-chunk prediction. Inference requires a single
+                        Video-DiT forward over the current observation and noisy future slots, without future-video
+                        generation or iterative action denoising.</p>
+                    <p>Without embodied pretraining, WAM-Adapter uses only 121M trainable parameters with a compact
+                        Wan-1.3B backbone, achieving 89.0% success across 50 RoboTwin 2.0 tasks, 98.5% on LIBERO, and
+                        75.17% on LIBERO-Plus. To our knowledge, this is the smallest reported trainable-parameter
+                        budget for directly trained WAMs without embodied pretraining. Under the same setting,
+                        WAM-Adapter improves training throughput by 9.66&times; while using 98% fewer trainable
+                        parameters than Fast-WAM. These results show that Video-DiT representations formed during
+                        world-model adaptation can be efficiently reused for strong robot control.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section method-section" id="method">
+            <div class="container is-max-widescreen">
+                <div class="section-heading">
+                    <h2 class="title is-3 section-title">Method</h2>
+                    <p class="task-section-note">A frozen Video-DiT, a single joint current+future forward, and a
+                        lightweight temporal-group readout that predicts the whole action chunk directly.</p>
+                </div>
+
+                <figure class="figure-panel wide-figure">
+                    <img src="./static/images/paper/architecture.png" alt="WAM-Adapter architecture">
+                    <figcaption>
+                        <strong>Overview of WAM-Adapter.</strong> A frozen pretrained Video DiT is adapted with LoRA and
+                        processes the clean current observation together with noisy future latent slots in a single
+                        forward pass. WAM-Adapter preserves the resulting Current, Early-Future, and Late-Future
+                        representations, applies temporal-group-specific cross-layer readout, and uses a lightweight
+                        action decoder to directly predict an action chunk.
+                    </figcaption>
+                </figure>
+
+                <div class="method-grid">
+                    <div class="method-card">
+                        <h4>1. Frozen Video-DiT + LoRA</h4>
+                        <p>The pretrained <em>Wan2.1-T2V-1.3B</em> backbone keeps its spatiotemporal priors intact.
+                            Rank-64 LoRA adapts it to robot data, so only 121M parameters are trainable &mdash; no full
+                            backbone fine-tuning, no embodied pretraining.</p>
+                    </div>
+                    <div class="method-card">
+                        <h4>2. One Joint Current+Future Pass</h4>
+                        <p>The clean current frame and a few noisy future latent slots (&tau; = 1) are processed
+                            together in a single Video-DiT forward. There is no future-video denoising loop and no
+                            additional action-side Video-DiT forward.</p>
+                    </div>
+                    <div class="method-card">
+                        <h4>3. Temporal-Group Cross-Layer Readout</h4>
+                        <p>The readout keeps the temporal identity of the representations as <em>Current</em>,
+                            <em>Early-Future</em>, and <em>Late-Future</em> groups, learns group-specific cross-layer
+                            fusion weights, aligns fused keys to the action timeline, and predicts the chunk with a
+                            small mixed-context decoder.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section results-section" id="results">
+            <div class="container is-max-widescreen">
+                <div class="section-heading">
+                    <h2 class="title is-3 section-title">Results</h2>
+                    <p class="result-section-note">Strong control performance with the smallest reported
+                        trainable-parameter budget among directly trained WAMs without embodied pretraining.</p>
+                </div>
+
+                <div class="results-grid">
+                    <section class="result-panel result-panel-wide">
+                        <div class="task-header result-header">
+                            <p class="task-kicker">Main Results</p>
+                            <h3 class="title is-4">Success rates and efficiency</h3>
+                        </div>
+
+                        <div class="result-block">
+                            <div class="metric-row">
+                                <div class="metric-card">
+                                    <div class="metric-value">89.0%</div>
+                                    <div class="metric-label">RoboTwin 2.0 (50 tasks)</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">98.5%</div>
+                                    <div class="metric-label">LIBERO (four suites)</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">75.17%</div>
+                                    <div class="metric-label">LIBERO-Plus (zero-shot)</div>
+                                </div>
+                            </div>
+                            <div class="metric-row">
+                                <div class="metric-card">
+                                    <div class="metric-value">121M</div>
+                                    <div class="metric-label">trainable parameters (1.3B frozen backbone)</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">9.66&times;</div>
+                                    <div class="metric-label">training throughput vs. Fast-WAM</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">92.05 ms</div>
+                                    <div class="metric-label">inference latency (RTX 4090)</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value">3.41 GiB</div>
+                                    <div class="metric-label">peak inference memory</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="finding-box"><strong>Takeaway:</strong> WAM-Adapter achieves the highest LIBERO-Plus
+                            success rate among the compared methods and reaches 89.0% on RoboTwin 2.0, while training
+                            with 98% fewer trainable parameters than Fast-WAM under the same setting.</div>
+                    </section>
+
+                    <section class="result-panel result-panel-wide">
+                        <div class="task-header result-header">
+                            <p class="task-kicker">Analysis</p>
+                            <h3 class="title is-4">Adaptation, readout and real-world behavior</h3>
+                        </div>
+
+                        <div class="result-block">
+                            <div class="two-up-figures">
+                                <figure class="figure-panel compact-figure">
+                                    <img src="./static/images/results/rank_ablation.png"
+                                        alt="Backbone adaptation ablation">
+                                    <figcaption>
+                                        <strong>Backbone adaptation.</strong> With the backbone frozen and no LoRA,
+                                        success is 49.4%; rank-64 LoRA (used by WAM-Adapter) reaches 97.4%, close to
+                                        full fine-tuning (98.5%) that updates the entire Video-DiT.
+                                    </figcaption>
+                                </figure>
+                                <figure class="figure-panel compact-figure">
+                                    <img src="./static/images/results/readout_analysis.png" alt="Readout analysis">
+                                    <figcaption>
+                                        <strong>Readout analysis.</strong> (a) Layer-wise readout magnitude for each
+                                        temporal group; (b) attention across predicted action steps &mdash; Early-Future
+                                        representations contribute to early steps, Late-Future to later steps.
+                                    </figcaption>
+                                </figure>
+                            </div>
+                        </div>
+
+                        <div class="result-block">
+                            <figure class="figure-panel wide-figure">
+                                <img src="./static/images/results/real_world_evaluation.png"
+                                    alt="Real-world evaluation">
+                                <figcaption>
+                                    <strong>Real-world evaluation.</strong> Beyond simulation, WAM-Adapter consistently
+                                    outperforms the lightweight WAM baseline across three real-world manipulation tasks
+                                    under the same evaluation protocol.
+                                </figcaption>
+                            </figure>
+                        </div>
+
+                        <div class="result-block">
+                            <figure class="figure-panel wide-figure">
+                                <img src="./static/images/results/qualitative_prediction_attention.png"
+                                    alt="Qualitative prediction and attention">
+                                <figcaption>
+                                    <strong>Qualitative prediction and attention.</strong> The model produces accurate
+                                    future predictions and action chunks, and its attention tracks the manipulated
+                                    objects across time.
+                                </figcaption>
+                            </figure>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="BibTeX">
+            <div class="container is-max-desktop content">
+                <h2 class="title is-3 section-title">BibTeX</h2>
+                <p>The arXiv release is coming soon; for now please cite the project as:</p>
+                <pre><code>@article{wamadapter2026,
+  title   = {WAM-Adapter: Efficiently Adapting Video-DiT World Representations to Robot Actions},
+  author  = {Liu, Dongxu and Li, Zhe and Ke, Zundong and Zhang, Zhipeng},
+  journal = {arXiv preprint},
+  year    = {2026},
+}</code></pre>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="content has-text-centered">
+                <p>
+                    This website is licensed under a <a rel="license"
+                        href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike
+                        4.0 International License</a>.
+                </p>
+                <p>
+                    Website source code based on the <a href="https://github.com/nerfies/nerfies.github.io">Nerfies
+                        project page</a>.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
